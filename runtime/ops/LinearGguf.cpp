@@ -641,7 +641,7 @@ void Linear::addGgufRegister(metal::CommandGraph &graph, const LinearBuffers &b,
         for (const QuantizedSegment &s : segments) tensor(s, 'a', b.output, b.output);
         return;
       }
-      const GgufDecodeFusedParams params = fusedSegments(plan, order, bindings);
+      const GgufDecodeFusedParams params = decodeFusedSegments(plan, order, bindings);
       bindings.insert(bindings.end(), {b.output, partials, counters});
       graph.add(prefix + segments.front().name() + suffix + "_fused", std::move(bindings), params, grid,
                 {GGUF_REGISTER_THREADS, 1, 1});

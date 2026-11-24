@@ -102,7 +102,9 @@ AttentionWorkspace RelativeAttention::workspace(uint32_t slots, kv::Layout layou
 RelativeAttentionPlan RelativeAttention::plan(std::span<const kv::ChunkedPrefillParams> sequences,
                                               kv::Layout layout, const AttentionCalibration &calibration,
                                               Int8Activations int8Activations, AttentionWorkspace capacity,
-                                              RelativeAttentionVariant variant, StepKind step) {
+                                              RelativeAttentionVariant variant,
+                                              AttentionTile tile, uint32_t gpuCores,
+                                              StepKind step) {
   requireLayout(layout);
   requireVariant(variant);
   static_cast<void>(commandRows(sequences, layout));
@@ -119,7 +121,8 @@ RelativeAttentionPlan RelativeAttention::plan(std::span<const kv::ChunkedPrefill
     for (const kv::ChunkedPrefillParams &chunk : sequences)
       if (chunk.chunk_tokens != sequences.front().chunk_tokens || chunk.chunk_tokens > SPLASH_TARGET_VERIFY_ROWS)
         throw std::invalid_argument("a decode step's lanes share a lane cap of at most a verify block's rows");
-  if (decode && !calibration.cores)
+  const uint32_t cores = calibration.cores ? calibration.cores : gpuCores;
+  if (decode && !cores)
     throw std::invalid_argument("a decode step's splits fill a device's cores: a calibration of none");
   const AttentionWorkspace slot = attentionWorkspace(slotRows(kQueryHeads), kHeadDimension);
   const uint64_t slots = std::min(capacity.partialsBytes / slot.partialsBytes,
@@ -132,7 +135,8 @@ RelativeAttentionPlan RelativeAttention::plan(std::span<const kv::ChunkedPrefill
     const uint64_t pages =
         readPages(uint64_t{chunk.committed_tokens} + chunk.chunk_tokens, variant.windowTokens);
     const uint32_t splits = decode ? decodeSplits(pages, chunk.chunk_tokens, calibration.cores)
-                                   : attentionSplits(tiles, pages, variant.windowTokens, calibration.pagesPerSplit);
+                                   : attentionSplits(tiles, pages, variant.windowTokens, calibration.pagesPerSplit,
+                                                     layout.kvHeads, tile, cores);
     splitReads = std::max(splitReads, (pages + splits - 1) / splits);
     plan.sequences_[plan.sequenceCount_++] = {chunk.chunk_tokens, chunk.committed_tokens, 0, splits};
   }

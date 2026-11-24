@@ -201,6 +201,8 @@ public:
                                                   kv::Layout layout, const AttentionCalibration &calibration,
                                                   Int8Activations int8Activations, AttentionWorkspace capacity,
                                                   RelativeAttentionVariant variant = {},
+                                                  AttentionTile tile = AttentionTile::Mpp,
+                                                  uint32_t gpuCores = 0,
                                                   StepKind step = StepKind::Prefill);
   // The history splits of a decode lane's tile of `laneCap` rows that reads
   // `pages` pages on a GPU of `cores` cores: one per kDecodeCorePages / cores

@@ -54,13 +54,24 @@ inline uint64_t readPages(uint64_t visibleTokens, uint32_t windowTokens) {
 // alone, so batching never changes a sequence's partition.
 inline constexpr uint32_t kSharedSplits = 32;
 inline constexpr uint32_t kTilePagesPerSplit = 16;
-inline uint32_t attentionSplits(uint32_t tiles, uint64_t pages, uint32_t windowTokens, uint32_t pagesPerSplit) {
+//
+// On Apple7/8 (AttentionTile::Register) a sequence of a few tiles at long
+// history has too few threadgroups to fill the GPU, so its history splits at
+// least until tiles x splits x KV heads reaches about 32 threadgroups a core
+// (`gpuCores`), within the most.
+inline uint32_t attentionSplits(uint32_t tiles, uint64_t pages, uint32_t windowTokens, uint32_t pagesPerSplit,
+                                uint32_t kvHeads, AttentionTile tile, uint32_t gpuCores) {
   const uint32_t fewest = std::clamp(kSharedSplits / tiles, 1U, kSharedSplits);
   const uint32_t most = std::clamp(kAttentionSequenceSplits / tiles, fewest, kSharedSplits);
-  const uint32_t splits = static_cast<uint32_t>(
+  uint32_t splits = static_cast<uint32_t>(
       tiles == 1 ? std::clamp<uint64_t>((pages + kTilePagesPerSplit - 1) / kTilePagesPerSplit, kSharedSplits,
                                         kv::kAttentionMaximumSplits)
                  : std::clamp<uint64_t>(pages / pagesPerSplit, fewest, most));
+  if (tiles > 1 && pages && tile == AttentionTile::Register && gpuCores && kvHeads) {
+    constexpr uint32_t kTargetThreadgroupsPerCore = 32;
+    const uint32_t target = kTargetThreadgroupsPerCore * gpuCores / kvHeads;
+    splits = std::max(splits, std::clamp(target / tiles, fewest, most));
+  }
   return windowTokens ? std::min(splits, kv::windowAttentionPages(windowTokens)) : splits;
 }
 

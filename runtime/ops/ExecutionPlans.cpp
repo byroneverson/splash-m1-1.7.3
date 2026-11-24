@@ -39,7 +39,7 @@ std::set<std::string> relativeKernels(const ExecutionPlans &plans, std::span<con
   for (const RelativeAttentionVariant &variant : variants) {
     const RelativeAttentionPlan plan =
         RelativeAttention::plan(sequence, layout, plans.calibration().attention, plans.linear().int8Activations(),
-                                RelativeAttention::sequenceWorkspace(layout), variant);
+                                RelativeAttention::sequenceWorkspace(layout), variant, plans.attentionTile(), plans.calibration().cores);
     for (const RelativeAttentionPlan::Dispatch &dispatch : plan.dispatches()) {
       if (plan.direct(dispatch)) {
         kernels.insert(plan.directPipeline());

@@ -501,6 +501,12 @@ inline constexpr MoeCalibration kThirtyTwoRowMoe{.wideTileRoutes = kNever};
 inline KernelCalibration KernelCalibration::of(const DeviceCapabilities &device) noexcept {
   const uint32_t cores = device.plannedGpuCores();
   const GpuClass gpu = device.gpuClass();
+  // Apple7/8 run the MoE experts on their MMA tile (selectMoe) and the
+  // attention on the register tile, whose splits follow the cores
+  // (PagedAttention.cpp); no neural accelerator takes a float projection, and
+  // no INT8 query is faster on their fp32-only matrix operations.
+  if (gpu == GpuClass::Apple7)
+    return {cores, kApple7Projection, kApple9FloatTile, kApple9DenseTile, kApple9Attention, kThirtyTwoRowMoe};
   AttentionCalibration attention =
       gpu != GpuClass::Apple9 ? kApple10Attention
                               : cores <= kApple9SmallGpuCores ? kApple9SmallAttention : kApple9Attention;
@@ -509,12 +515,6 @@ inline KernelCalibration KernelCalibration::of(const DeviceCapabilities &device)
   const MoeCalibration moe = !pro                              ? kThirtyTwoRowMoe
                              : cores < kApple10ProMoeFromCores ? kApple10SixteenCoreMoe
                                                                : kApple10ProMoe;
-  // Apple7/8 run the MoE experts on their MMA tile (selectMoe) and the
-  // attention on the register tile, whose splits follow the cores
-  // (PagedAttention.cpp); no neural accelerator takes a float projection, and
-  // no INT8 query is faster on their fp32-only matrix operations.
-  if (gpu == GpuClass::Apple7)
-    return {cores, kApple7Projection, kApple9FloatTile, kApple9DenseTile, kApple9Attention, true};
   if (gpu != GpuClass::Apple9)
     return {cores,
             gpu == GpuClass::Apple11            ? kApple11Projection

@@ -279,10 +279,14 @@ public:
   // the choice, as a decode step's lanes do. Apple7/8 run the register
   // `tile`, whose sequences of more than one tile split their history at
   // least until their threadgroups fill the device's `gpuCores`.
-  [[nodiscard]] static AttentionPlan plan(std::span<const kv::ChunkedPrefillParams> sequences, uint32_t queryHeads,
-                                          kv::Layout layout, const AttentionCalibration &calibration,
-                                          Int8Activations int8Activations, AttentionWorkspace capacity,
-                                          AttentionVariant variant = {}, AttentionTile tile = AttentionTile::Mpp,
+  [[nodiscard]] static AttentionPlan plan(std::span<const kv::ChunkedPrefillParams> sequences,
+                                          uint32_t queryHeads,
+                                          kv::Layout layout,
+                                          const AttentionCalibration &calibration,
+                                          Int8Activations int8Activations,
+                                          AttentionWorkspace capacity,
+                                          AttentionVariant variant = {},
+                                          AttentionTile tile = AttentionTile::Mpp,
                                           uint32_t gpuCores = 0);
   // `plan`'s sequences from the tile that holds each one's last row: their
   // kernels and splits, so each tile computes what it does in `plan`.

@@ -104,7 +104,8 @@ void Inkling2LoopTarget::planRelativeAttention(PrefillStep &step) const {
   const auto plan = [&](ops::RelativeAttentionVariant variant) {
     return ops::RelativeAttention::plan(step.attentionSequences(), geometry_.kvLayout,
                                         operators_.calibration().attention, linear.int8Activations(), workspace,
-                                        variant, step.decode ? ops::StepKind::Decode : ops::StepKind::Prefill);
+                                        variant, operators_.attentionTile(), operators_.calibration().cores,
+                                        step.decode ? ops::StepKind::Decode : ops::StepKind::Prefill);
   };
   // The full layers' variant and the sliding layers', as its layout states
   // them (Inkling2LoopLayout::relativeAttention).

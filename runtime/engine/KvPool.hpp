@@ -125,19 +125,19 @@ public:
 
   // Holds the runway's pages, as a request holds its own, while it lives:
   // startup warmup runs on them without acquiring them, so the pool neither
-  // hands them out nor releases their extents meanwhile. With prefillPages,
+  // hands them out nor releases their extents meanwhile. With pages,
   // holds just that prefix and allocates any missing Full extents it needs.
   // Rethrows, holding none, when the pool refuses one.
   class RunwayHold final {
   public:
-    explicit RunwayHold(KvPool &pool, std::optional<uint32_t> prefillPages = std::nullopt);
+    explicit RunwayHold(KvPool &pool, std::optional<uint32_t> pages = std::nullopt);
     ~RunwayHold();
     RunwayHold(const RunwayHold &) = delete;
     RunwayHold &operator=(const RunwayHold &) = delete;
 
   private:
     KvPool &pool_;
-    uint32_t pageCount_;
+    uint32_t pages_;
   };
 
   // The pages, of the form, come with one active reference each, the
@@ -341,6 +341,7 @@ private:
   // Every allocation and release of an extent, timed and counted; the
   // extent's record follows the storage.
   [[nodiscard]] metal::AllocationResult allocateExtent(uint32_t extent, kv::PageForm form);
+  void allocateRunwayExtent(uint32_t extent);
   void releaseExtent(uint32_t extent);
 
   kv::ExtentStorage &storage_;
